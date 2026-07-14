@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MHC 分析 — 我該不該接受這個新工作機會？現在工作薪水低但穩定，新工作薪水...</title>
+    <style>
+    :root {
+        --bg: #0f0f1a;
+        --card-bg: #1a1a2e;
+        --text: #e0e0e0;
+        --text-secondary: #a0a0b0;
+        --accent: #7c3aed;
+        --accent-glow: rgba(124, 58, 237, 0.3);
+        --border: #2a2a3e;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --code-bg: #1e1e30;
+        --code-text: #c4b5fd;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC",
+                     "PingFang TC", "Microsoft JhengHei", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+        padding: 2rem 1rem;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+        color: var(--accent);
+        margin-bottom: 0.5rem;
+    }
+
+    header .meta {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    section {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    section h2 {
+        font-size: 1.1rem;
+        color: var(--accent);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    section h3 {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .hc-card {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .hc-card:hover {
+        border-color: var(--accent);
+        box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .hc-card h3 code {
+        background: var(--code-bg);
+        color: var(--code-text);
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+
+    .match-reason {
+        color: var(--text-secondary);
+        font-style: italic;
+        margin: 0.5rem 0;
+        padding-left: 0.5rem;
+        border-left: 2px solid var(--accent);
+    }
+
+    .action-steps {
+        margin-top: 0.5rem;
+    }
+
+    ol {
+        padding-left: 1.5rem;
+    }
+
+    li {
+        margin-bottom: 0.5rem;
+    }
+
+    code {
+        background: var(--code-bg);
+        color: var(--code-text);
+        padding: 0.1em 0.3em;
+        border-radius: 3px;
+        font-size: 0.9em;
+    }
+
+    footer {
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 640px) {
+        body {
+            padding: 1rem 0.5rem;
+        }
+        section {
+            padding: 1rem;
+        }
+    }
+</style>
+</head>
+<body>
+    <header>
+        <h1>🧠 Minerva HC 分析</h1>
+        <div class="meta">
+            提問者：測試者 · 2026-07-14 12:31 · Powered by MHC Engine
+        </div>
+    </header>
+
+    <section class="question">
+        <h2>📝 原始問題</h2>
+        <p style="padding: 0.5rem; background: var(--bg); border-radius: 8px; border-left: 3px solid var(--accent);">
+            我該不該接受這個新工作機會？現在工作薪水低但穩定，新工作薪水高30%但責任大很多
+        </p>
+    </section>
+
+    ```html
+<div class="mhc-analysis">
+  <!-- 深色主題樣式 -->
+  <style>
+    .mhc-analysis {
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      line-height: 1.7;
+    }
+    .mhc-analysis h2 {
+      color: #a78bfa;
+      border-bottom: 2px solid #2d2d4a;
+      padding-bottom: 0.5rem;
+      margin-top: 2rem;
+      font-weight: 600;
+    }
+    .mhc-analysis h3 {
+      color: #c4b5fd;
+      margin-top: 0;
+      font-size: 1.1rem;
+    }
+    .mhc-analysis code {
+      background: #2d2d4a;
+      color: #f0e6ff;
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .mhc-analysis .hc-card {
+      background: #232340;
+      border-left: 4px solid #7c3aed;
+      padding: 1.2rem 1.5rem;
+      margin: 1.2rem 0;
+      border-radius: 0 12px 12px 0;
+      transition: background 0.2s;
+    }
+    .mhc-analysis .hc-card:hover {
+      background: #282850;
+    }
+    .mhc-analysis .match-reason {
+      color: #b0b0c8;
+      font-size: 0.95rem;
+      margin: 0.5rem 0;
+    }
+    .mhc-analysis .action-steps {
+      background: #1e1e36;
+      padding: 0.8rem 1.2rem;
+      border-radius: 8px;
+      margin-top: 0.8rem;
+      border: 1px solid #3a3a5c;
+    }
+    .mhc-analysis .action-steps p {
+      margin: 0.3rem 0;
+      color: #d4d4ee;
+    }
+    .mhc-analysis .combo {
+      background: #1e1e36;
+      padding: 1.2rem 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #3a3a5c;
+      margin: 1.5rem 0;
+    }
+    .mhc-analysis .action-plan ol {
+      padding-left: 1.5rem;
+    }
+    .mhc-analysis .action-plan li {
+      margin: 0.8rem 0;
+      padding-left: 0.5rem;
+    }
+    .mhc-analysis .action-plan li::marker {
+      color: #a78bfa;
+      font-weight: bold;
+    }
+    .mhc-analysis .priority-star {
+      color: #fbbf24;
+      font-weight: bold;
+    }
+    .mhc-analysis .diagnosis, .mhc-analysis .action-plan {
+      background: #1a1a2e;
+      padding: 0.2rem 0;
+    }
+    .mhc-analysis hr {
+      border: 1px solid #2d2d4a;
+      margin: 1.5rem 0;
+    }
+    .mhc-analysis .subtle {
+      color: #8888aa;
+      font-size: 0.9rem;
+    }
+  </style>
+
+  <!-- 階段一：情境診斷 -->
+  <section class="diagnosis">
+    <h2>🔍 情境診斷</h2>
+    <p><strong>路徑識別：</strong>決策路徑（權衡決策）＋ 倫理路徑（責任分配與利害關係人）</p>
+    <p><strong>核心困境一句話：</strong>你用「穩定但低薪」的安全感，交換「高報酬但高壓力」的不確定性——這不是單純的薪資計算，而是一次對風險承受力、長期目標與自我效能的深層檢驗。</p>
+  </section>
+
+  <!-- 階段二：HC 匹配 -->
+  <section class="hc-recommendations">
+    <h2>🧠 思考處方</h2>
+    <p class="subtle">以下 3 個 HC 針對你的決策困境，依重要性排序</p>
+
+    <!-- HC 1: #utility -->
+    <div class="hc-card">
+      <h3><code>#utility</code> — 效用理論：從所有利害關係人視角，系統性權衡每個選項的成本與收益</h3>
+      <p class="match-reason"><strong>為何匹配你的情境：</strong>你目前只比較了「薪水」和「責任大小」，但效用分析要求你列出所有利害關係人（你自己、伴侶/家庭、未來雇主、同事、健康狀態）並量化非金錢因素：成長空間、壓力損耗、時間彈性、履歷加成、離職風險。少了這些，你的決策等於只看價格不看價值。</p>
+      <div class="action-steps">
+        <p>→ 核心操作：</p>
+        <p>1. 畫一張 3×5 表格：橫軸為「留在現職」「接受新工作」「繼續面試其他選項」；縱軸為「財務」「成長」「壓力/健康」「人際關係」「未來彈性」。</p>
+        <p>2. 每個格子填入 -2 到 +2 的評分，並加權（例如財務權重 30%、健康權重 25%…）。</p>
+        <p>3. 計算加權總分——避免只用直覺「感覺新工作比較好」。</p>
+      </div>
+    </div>
+
+    <!-- HC 2: #discounting -->
+    <div class="hc-card">
+      <h3><code>#discounting</code> — 時間折扣：考量未來價值的折現，避免過度重視短期利益而低估長期成本</h3>
+      <p class="match-reason"><strong>為何匹配你的情境：</strong>「薪水高30%」是立即的誘因，但「責任大很多」的壓力與 burnout 風險是遞延的成本。人類大腦天生對延遲懲罰打折（hyperbolic discounting），你可能低估了半年後每天加班、高壓決策對身心與關係的累積傷害。反之，你也可能低估了現職「低薪但穩定」帶來的長期心理安全與業餘發展空間。</p>
+      <div class="action-steps">
+        <p>→ 核心操作：</p>
+        <p>1. 做一個「時間折現測試」：想像新工作的壓力在 3 個月、6 個月、1 年後分別是什麼樣子？用 1-10 分記錄。</p>
+        <p>2. 把 30% 薪資增幅換算成「時薪」：若每週多花 10 小時在工作上，實際時薪增幅可能只剩 12%。</p>
+        <p>3. 問自己：如果新工作的薪資只多 15%（而非 30%），你的決定會變嗎？若會，代表你對金錢的折現率過高。</p>
+      </div>
+    </div>
+
+    <!-- HC 3: #infoneeded -->
+    <div class="hc-card">
+      <h3><code>#infoneeded</code> — 資訊需求：明確定義支持某項決策所需的具體資訊，避免在資訊不足時倉促決定</h3>
+      <p class="match-reason"><strong>為何匹配你的情境：</strong>你的問題中缺少關鍵資訊：新工作的「責任大很多」具體指什麼？是工時長、管理壓力、還是業績目標？你對新公司的文化、主管風格、團隊穩定性了解多少？現職的「低薪」是否有調薪機制或升遷機會？這些缺失資訊正是你猶豫不決的根源——你試圖用現有資訊做決策，但資訊本身就不完整。</p>
+      <div class="action-steps">
+        <p>→ 核心操作：</p>
+        <p>1. 列出你目前「不知道但必須知道」的 5 件事（例如：新工作的平均離職率、直屬主管的管理風格、過去一年團隊擴編情況）。</p>
+        <p>2. 針對每項，設計一個獲取方式：LinkedIn 找人資聊、Glassdoor 看評價、要求與未來同事非正式 coffee chat。</p>
+        <p>3. 設定一週的「資訊蒐集期」——在這期間內不做決定，只收集資料。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 階段三：偏誤診斷 -->
+  <section class="diagnosis" style="margin-top: 2rem;">
+    <h2>⚠️ 偏誤診斷（HBB 補充）</h2>
+    <p><strong>🛡️ 錨定效應（Anchoring Effect）：</strong>你可能被「30% 加薪」這個數字錨定，忽略了比較基準應該是「總體報酬包」（含福利、成長、壓力成本），而非單純薪資差。</p>
+    <p><strong>🛡️ 現狀偏誤（Status Quo Bias）：</strong>「穩定但低薪」是一個已知狀態，人類傾向高估已知的缺點、低估未知的風險。你對新工作的「責任大」可能被放大了。</p>
+    <p><strong>配對矯正 HC：</strong><code>#utility</code>（強制多維度評分，打破單一錨點）＋ <code>#infoneeded</code>（用具體數據取代模糊恐懼，對抗現狀偏誤）</p>
+  </section>
+
+  <!-- 階段四：組合技 -->
+  <section class="combo">
+    <h2>🔄 組合技：Utility × Discounting × InfoNeeded</h2>
+    <p><strong>協同運作方式：</strong></p>
+    <p>1️⃣ <code>#infoneeded</code> 先補齊資訊缺口——沒有完整資訊，效用分析就是空中樓閣。<br>
+       2️⃣ <code>#utility</code> 建立多維度評分框架——把金錢、壓力、成長、關係全部量化比較。<br>
+       3️⃣ <code>#discounting</code> 校正時間偏誤——確保你沒有因為「立即加薪」而忽略「延遲壓力」。</p>
+    <p><strong>最終效果：</strong>從「直覺二選一」升級為「系統性決策模型」，你的猶豫會轉變為清晰的權重排序。</p>
+  </section>
+
+  <!-- 階段五：行動計畫 -->
+  <section class="action-plan">
+    <h2>📋 行動計畫（按優先級）</h2>
+    <ol>
+      <li><span class="priority-star">⭐ 最重要：</span>本週完成「資訊蒐集清單」（<code>#infoneeded</code>）。至少聯繫 1 位在新公司工作的人（不限於面試官），問到「責任大很多」的具體案例。</li>
+      <li>下週一前畫出效用表格（<code>#utility</code>），加權評分後算出總分。注意：壓力/健康權重不要低於 20%。</li>
+      <li>做「時間折現測試」（<code>#discounting</code>）：寫下新工作 6 個月後的典型一天行程，再寫下現職 6 個月後的典型一天。比較兩者對你生活品質的影響。</li>
+      <li>最終決策後，設定 3 個月後的複盤日——無論選擇哪條路，都要回頭檢視當初的假設是否正確，這會幫助你未來決策更精準。</li>
+    </ol>
+    <p class="subtle" style="margin-top: 1rem;">💡 記住：沒有「完美選擇」，只有「資訊充分下的最佳權衡」。你現在的行動不是消除風險，而是讓風險變得可知、可控。</p>
+  </section>
+</div>
+```
+
+    <footer>
+        <p>Minerva HC Toolkit · AI 輔助分析僅供參考，最終決策權在你手中</p>
+        <p>MHC Backend v0.1 · Powered by DeepSeek</p>
+    </footer>
+</body>
+</html>

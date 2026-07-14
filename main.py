@@ -1,0 +1,222 @@
+"""MHC Backend — FastAPI 主程式
+
+PC 端 MHC 推理引擎 API 服務。
+提供 /health 健康檢查和 /ask 分析端點。
+透過 Cloudflare Tunnel 對外暴露給 Railway。
+"""
+
+import os
+import time
+import logging
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, HTMLResponse
+from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+from obsidian_reader import ObsidianReader
+from mhc_engine import MHCInferenceEngine, LLMUnavailableError
+from html_renderer import wrap_html, render_error_html
+
+load_dotenv()
+
+# ── Config ──────────────────────────────────────────
+MHC_API_TOKEN = os.getenv("MHC_API_TOKEN", "change-me")
+OBSIDIAN_VAULT_PATH = os.getenv(
+    "OBSIDIAN_VAULT_PATH", "/mnt/d/Obsidian/Doc_Obsidian/Summer_sync"
+)
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", "8001"))
+
+# ── Logging ─────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger("mhc-backend")
+
+# ── Init ────────────────────────────────────────────
+reader = ObsidianReader(OBSIDIAN_VAULT_PATH)
+engine = MHCInferenceEngine(reader)
+
+# ── App ─────────────────────────────────────────────
+app = FastAPI(
+    title="MHC Backend",
+    description="Minerva HC 推理引擎 — PC 端 API",
+    version="0.1.0",
+)
+
+# CORS（Railway 跨域呼叫）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://mhc.summer-hsia.com",
+        "https://summer-hsia.com",
+        "http://localhost:8000",
+        "http://localhost:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+
+# ── Models ──────────────────────────────────────────
+class AskRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000, description="使用者問題")
+    user_name: str = Field(default="使用者", max_length=50)
+
+
+class AskResponse(BaseModel):
+    html: str = Field(..., description="完整 MHC 分析 HTML")
+    hcs_used: list[str] = Field(default_factory=list)
+    biases_detected: list[str] = Field(default_factory=list)
+    llm_latency_ms: int = 0
+
+
+class HealthResponse(BaseModel):
+    status: str
+    vault_accessible: bool
+    vault_details: dict
+    llm_configured: bool
+    uptime_seconds: float
+
+
+class ErrorResponse(BaseModel):
+    error: str
+    message: str
+
+
+# ── Auth ────────────────────────────────────────────
+def verify_token(authorization: Optional[str] = Header(None)) -> None:
+    """驗證 Bearer token"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing authorization header")
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or token != MHC_API_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+
+
+# ── Startup ─────────────────────────────────────────
+_start_time = time.time()
+
+
+@app.on_event("startup")
+async def startup():
+    logger.info(f"MHC Backend starting on {HOST}:{PORT}")
+    logger.info(f"Obsidian vault: {OBSIDIAN_VAULT_PATH}")
+    logger.info(f"Vault accessible: {reader.is_accessible}")
+
+
+# ── Endpoints ───────────────────────────────────────
+@app.get("/health", response_model=HealthResponse)
+async def health():
+    """健康檢查端點 — Railway 定期 ping 用"""
+    vault_checks = reader.health_check()
+    return HealthResponse(
+        status="ok" if vault_checks["vault_accessible"] else "degraded",
+        vault_accessible=vault_checks["vault_accessible"],
+        vault_details=vault_checks,
+        llm_configured=bool(os.getenv("LLM_API_KEY")),
+        uptime_seconds=time.time() - _start_time,
+    )
+
+
+@app.post("/ask", response_model=AskResponse)
+async def ask(
+    req: AskRequest,
+    authorization: Optional[str] = Header(None),
+):
+    """MHC 分析端點 — 接收問題，回傳 HTML
+
+    Railway 端會轉發使用者問題到此端點。
+    需要 Bearer token 驗證（內部 API 使用）。
+    """
+    # 驗證 token
+    verify_token(authorization)
+
+    logger.info(f"Ask request from '{req.user_name}': {req.question[:80]}...")
+
+    try:
+        result = engine.analyze(req.question, req.user_name)
+        # 包裝成完整 HTML
+        result["html"] = wrap_html(result["html"], req.question, req.user_name)
+        logger.info(
+            f"Analysis complete: {len(result['hcs_used'])} HCs, "
+            f"{len(result['biases_detected'])} biases, "
+            f"{result['llm_latency_ms']}ms"
+        )
+        return AskResponse(**result)
+
+    except LLMUnavailableError as e:
+        logger.error(f"LLM unavailable: {e}")
+        html = render_error_html(str(e), req.question)
+        return AskResponse(
+            html=html,
+            hcs_used=[],
+            biases_detected=[],
+            llm_latency_ms=0,
+        )
+
+    except Exception as e:
+        logger.exception(f"Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail="推理引擎內部錯誤")
+
+
+# ── Direct HTML access (for testing) ────────────────
+@app.get("/test")
+async def test_page():
+    """測試頁面 — 直接瀏覽器確認服務運行"""
+    return HTMLResponse("""
+    <!DOCTYPE html>
+    <html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8">
+        <title>MHC Backend Test</title>
+        <style>
+            body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 1rem; }
+            h1 { color: #7c3aed; }
+            textarea { width: 100%; height: 100px; margin: 1rem 0; }
+            button { padding: 0.5rem 1rem; background: #7c3aed; color: white; border: none; border-radius: 4px; cursor: pointer; }
+            #result { margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 4px; white-space: pre-wrap; }
+        </style>
+    </head>
+    <body>
+        <h1>🧠 MHC Backend — 測試頁面</h1>
+        <p>服務運行中。輸入問題測試分析引擎：</p>
+        <textarea id="question" placeholder="輸入你的問題..."></textarea>
+        <br>
+        <input id="name" placeholder="你的名字" value="測試者" style="margin-right: 0.5rem;">
+        <button onclick="test()">送出分析</button>
+        <div id="result"></div>
+        <script>
+        async function test() {
+            const q = document.getElementById('question').value;
+            const n = document.getElementById('name').value;
+            document.getElementById('result').textContent = '分析中...';
+            try {
+                const resp = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: q, user_name: n })
+                });
+                const data = await resp.json();
+                const win = window.open('', '_blank');
+                win.document.write(data.html);
+            } catch(e) {
+                document.getElementById('result').textContent = '錯誤: ' + e.message;
+            }
+        }
+        </script>
+    </body>
+    </html>
+    """)
+
+
+# ── Main ────────────────────────────────────────────
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host=HOST, port=PORT, reload=False, log_level="info")
