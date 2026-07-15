@@ -135,8 +135,8 @@ def save_case_to_vault(case_id: str, question: str, user_name: str, html: str) -
 
     import pathlib
     vault = pathlib.Path(OBSIDIAN_VAULT_PATH)
-    html_dir = vault / "1_Projects" / "minerva-hc-toolbox" / "案例html"
-    md_dir = vault / "1_Projects" / "minerva-hc-toolbox" / "案例md"
+    html_dir = vault / "1_Projects" / "minerva-hc-toolbox" / "案例 HTML"
+    md_dir = vault / "1_Projects" / "minerva-hc-toolbox" / "案例 MD"
     html_dir.mkdir(parents=True, exist_ok=True)
     md_dir.mkdir(parents=True, exist_ok=True)
 
@@ -188,7 +188,7 @@ tags: [mhc, case, minerva-hc]
 
 ## 📄 完整 HTML
 
-→ [{case_id}.html](../案例html/{case_id}.html)
+→ [{case_id}.html](../案例%20HTML/{case_id}.html)
 
 ## 📝 分析內容（文字摘要）
 
