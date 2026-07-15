@@ -6,9 +6,11 @@ PC 端 MHC 推理引擎 API 服務。
 """
 
 import os
+import re
 import time
 import logging
 from typing import Optional
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,6 +69,7 @@ app.add_middleware(
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000, description="使用者問題")
     user_name: str = Field(default="使用者", max_length=50)
+    case_id: str = Field(default="", max_length=64, description="案例 ID")
 
 
 class AskResponse(BaseModel):
@@ -111,6 +114,100 @@ async def startup():
     logger.info(f"Vault accessible: {reader.is_accessible}")
 
 
+# ── Helpers ─────────────────────────────────────────
+def html_to_text(html: str) -> str:
+    """簡單 HTML → 純文字轉換"""
+    text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</p>", "\n\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</h[1-6]>", "\n\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</li>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def save_case_to_vault(case_id: str, question: str, user_name: str, html: str) -> dict:
+    """將案例存檔到 Obsidian vault 的 案例html 和 案例md 目錄"""
+    if not case_id:
+        return {"saved": False, "reason": "no case_id"}
+
+    import pathlib
+    vault = pathlib.Path(OBSIDIAN_VAULT_PATH)
+    html_dir = vault / "1_Projects" / "minerva-hc-toolbox" / "案例html"
+    md_dir = vault / "1_Projects" / "minerva-hc-toolbox" / "案例md"
+    html_dir.mkdir(parents=True, exist_ok=True)
+    md_dir.mkdir(parents=True, exist_ok=True)
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    today_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
+
+    # 儲存完整 HTML
+    html_path = html_dir / f"{case_id}.html"
+    full_html = f"""<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{case_id} — {question[:40]}</title>
+<style>
+  body {{ font-family: -apple-system, sans-serif; max-width: 800px; margin: 2rem auto; padding: 1rem; background: #1a1a2e; color: #e0e0e0; }}
+  h1 {{ color: #7c3aed; font-size: 1.3rem; }}
+  .meta {{ color: #888; font-size: 0.8rem; margin-bottom: 1.5rem; }}
+  .question {{ background: #16213e; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; border-left: 3px solid #7c3aed; }}
+</style>
+</head>
+<body>
+<h1>MHC 案例分析：{case_id}</h1>
+<div class="meta">提問者：{user_name}｜日期：{now}｜問題字數：{len(question)} 字</div>
+<div class="question"><strong>📝 原始問題：</strong><br>{question}</div>
+{html}
+</body>
+</html>"""
+    html_path.write_text(full_html, encoding="utf-8")
+
+    # 儲存 Markdown
+    md_path = md_dir / f"{case_id}.md"
+    text_summary = html_to_text(html)
+    text_preview = text_summary[:500] + ("..." if len(text_summary) > 500 else "")
+    md_content = f"""---
+case_id: {case_id}
+question: "{question[:80]}{'...' if len(question) > 80 else ''}"
+user_name: {user_name}
+date: {now}
+type: mhc-case
+tags: [mhc, case, minerva-hc]
+---
+
+# {case_id}
+
+> **提問者**：{user_name}
+> **日期**：{now}
+> **問題**：{question}
+
+## 📄 完整 HTML
+
+→ [{case_id}.html](../案例html/{case_id}.html)
+
+## 📝 分析內容（文字摘要）
+
+{text_preview}
+
+---
+
+*此案例由 MHC（Minerva Habits of Mind & Cognitive Bias Toolbox）自動分析產生。*
+"""
+    md_path.write_text(md_content, encoding="utf-8")
+
+    logger.info(f"case_saved case_id={case_id} html={html_path} md={md_path}")
+    return {
+        "saved": True,
+        "html_path": str(html_path),
+        "md_path": str(md_path),
+    }
+
+
 # ── Endpoints ───────────────────────────────────────
 @app.get("/health", response_model=HealthResponse)
 async def health():
@@ -148,6 +245,10 @@ async def ask(
             f"Analysis complete: {len(result['hcs_used'])} HCs, "
             f"{len(result['biases_detected'])} biases, "
             f"{result['llm_latency_ms']}ms"
+        )
+        # 存檔到 Obsidian vault
+        save_result = save_case_to_vault(
+            req.case_id, req.question, req.user_name, result["html"]
         )
         return AskResponse(**result)
 
