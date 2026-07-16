@@ -87,6 +87,15 @@ class HealthResponse(BaseModel):
     uptime_seconds: float
 
 
+class FeedbackRequest(BaseModel):
+    case_id: str = Field(..., min_length=1, max_length=64, description="案例 ID")
+    insight: int = Field(..., ge=1, le=5)
+    clarity: int = Field(..., ge=1, le=5)
+    actionability: int = Field(..., ge=1, le=5)
+    overall: int = Field(..., ge=1, le=5)
+    reuse_intent: int = Field(..., ge=1, le=5)
+
+
 class ErrorResponse(BaseModel):
     error: str
     message: str
@@ -208,6 +217,106 @@ tags: [mhc, case, minerva-hc]
     }
 
 
+def update_case_with_feedback(
+    case_id: str,
+    insight: int,
+    clarity: int,
+    actionability: int,
+    overall: int,
+    reuse_intent: int,
+) -> dict:
+    """將使用者評分寫入既有的案例 HTML 和 MD 檔案"""
+    import pathlib
+
+    vault = pathlib.Path(OBSIDIAN_VAULT_PATH)
+    html_dir = vault / "1_Projects" / "minerva-hc-toolbox" / "案例 HTML"
+    md_dir = vault / "1_Projects" / "minerva-hc-toolbox" / "案例 MD"
+
+    html_path = html_dir / f"{case_id}.html"
+    md_path = md_dir / f"{case_id}.md"
+
+    if not html_path.exists() and not md_path.exists():
+        logger.warning(f"update_feedback: case not found case_id={case_id}")
+        return {"updated": False, "reason": "case_not_found"}
+
+    dim_labels = {
+        "insight": "洞察有用性",
+        "clarity": "框架清晰度",
+        "actionability": "行動可行性",
+        "overall": "整體品質",
+        "reuse_intent": "再使用意願",
+    }
+    ratings = {
+        "insight": insight,
+        "clarity": clarity,
+        "actionability": actionability,
+        "overall": overall,
+        "reuse_intent": reuse_intent,
+    }
+    avg = round(sum(ratings.values()) / len(ratings), 1)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    # ── 更新 HTML ──
+    if html_path.exists():
+        html_content = html_path.read_text(encoding="utf-8")
+
+        # 生成評分 HTML
+        stars_html = ""
+        for key, label in dim_labels.items():
+            v = ratings[key]
+            filled = "★" * v + "☆" * (5 - v)
+            stars_html += (
+                f'<div class="feedback-row">'
+                f'<span class="feedback-dim">{label}</span>'
+                f'<span class="feedback-stars">{filled}</span>'
+                f'<span class="feedback-score">{v}/5</span>'
+                f"</div>\n"
+            )
+
+        feedback_html = f"""
+<div class="feedback-section" style="margin-top:2rem;padding:1.5rem;background:#16213e;border-radius:12px;border:1px solid #333;">
+<h3 style="color:#f59e0b;margin-bottom:0.75rem;">📊 使用者評分</h3>
+<div style="margin-bottom:0.5rem;color:#888;font-size:0.85rem;">提交時間：{now}｜綜合平均：{avg}/5</div>
+{stars_html}
+</div>"""
+
+        # 插入到 </body> 之前
+        if "</body>" in html_content:
+            html_content = html_content.replace("</body>", feedback_html + "\n</body>")
+        else:
+            html_content += feedback_html
+
+        html_path.write_text(html_content, encoding="utf-8")
+        logger.info(f"feedback_html_updated case_id={case_id}")
+
+    # ── 更新 Markdown ──
+    if md_path.exists():
+        md_content = md_path.read_text(encoding="utf-8")
+
+        # 加入評分 section（避免重複寫入）
+        if "## 📊 使用者評分" not in md_content:
+            stars_md = ""
+            for key, label in dim_labels.items():
+                v = ratings[key]
+                filled = "★" * v + "☆" * (5 - v)
+                stars_md += f"| {label} | {filled} | {v}/5 |\n"
+
+            feedback_md = f"""
+## 📊 使用者評分
+
+> 提交時間：{now}｜綜合平均：{avg}/5
+
+| 評分項目 | 評分 | 分數 |
+|----------|------|------|
+{stars_md}
+"""
+            md_content += feedback_md
+            md_path.write_text(md_content, encoding="utf-8")
+            logger.info(f"feedback_md_updated case_id={case_id}")
+
+    return {"updated": True, "avg": avg, "time": now}
+
+
 # ── Endpoints ───────────────────────────────────────
 @app.get("/health", response_model=HealthResponse)
 async def health():
@@ -265,6 +374,43 @@ async def ask(
     except Exception as e:
         logger.exception(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="推理引擎內部錯誤")
+
+
+@app.post("/feedback")
+async def save_feedback(
+    req: FeedbackRequest,
+    authorization: str = Header(None),
+):
+    """接收使用者評分，寫入 Obsidian 案例檔案
+
+    Railway 端在儲存評分到 DB 後，呼叫此端點同步更新案例檔案。
+    """
+    verify_token(authorization)
+
+    logger.info(
+        f"Feedback received: case_id={req.case_id} "
+        f"insight={req.insight} clarity={req.clarity} "
+        f"actionability={req.actionability} overall={req.overall} "
+        f"reuse_intent={req.reuse_intent}"
+    )
+
+    try:
+        result = update_case_with_feedback(
+            req.case_id,
+            req.insight,
+            req.clarity,
+            req.actionability,
+            req.overall,
+            req.reuse_intent,
+        )
+        if result["updated"]:
+            return {"status": "ok", "avg": result["avg"], "time": result["time"]}
+        else:
+            return {"status": "skipped", "reason": result.get("reason", "unknown")}
+
+    except Exception as e:
+        logger.exception(f"Failed to update case with feedback: {e}")
+        raise HTTPException(status_code=500, detail="寫入案例失敗")
 
 
 # ── Direct HTML access (for testing) ────────────────
