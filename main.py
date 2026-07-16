@@ -255,39 +255,45 @@ def update_case_with_feedback(
     }
     avg = round(sum(ratings.values()) / len(ratings), 1)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    updated_any = False
 
     # ── 更新 HTML ──
     if html_path.exists():
         html_content = html_path.read_text(encoding="utf-8")
 
-        # 生成評分 HTML
-        stars_html = ""
-        for key, label in dim_labels.items():
-            v = ratings[key]
-            filled = "★" * v + "☆" * (5 - v)
-            stars_html += (
-                f'<div class="feedback-row">'
-                f'<span class="feedback-dim">{label}</span>'
-                f'<span class="feedback-stars">{filled}</span>'
-                f'<span class="feedback-score">{v}/5</span>'
-                f"</div>\n"
-            )
+        # 防重複寫入
+        if "📊 使用者評分" in html_content:
+            logger.info(f"feedback_html_skipped case_id={case_id} (already exists)")
+        else:
+            # 生成評分 HTML
+            stars_html = ""
+            for key, label in dim_labels.items():
+                v = ratings[key]
+                filled = "★" * v + "☆" * (5 - v)
+                stars_html += (
+                    f'<div class="feedback-row">'
+                    f'<span class="feedback-dim">{label}</span>'
+                    f'<span class="feedback-stars">{filled}</span>'
+                    f'<span class="feedback-score">{v}/5</span>'
+                    f"</div>\n"
+                )
 
-        feedback_html = f"""
+            feedback_html = f"""
 <div class="feedback-section" style="margin-top:2rem;padding:1.5rem;background:#16213e;border-radius:12px;border:1px solid #333;">
 <h3 style="color:#f59e0b;margin-bottom:0.75rem;">📊 使用者評分</h3>
 <div style="margin-bottom:0.5rem;color:#888;font-size:0.85rem;">提交時間：{now}｜綜合平均：{avg}/5</div>
 {stars_html}
 </div>"""
 
-        # 插入到 </body> 之前
-        if "</body>" in html_content:
-            html_content = html_content.replace("</body>", feedback_html + "\n</body>")
-        else:
-            html_content += feedback_html
+            # 插入到 </body> 之前（只取代第一個，避免內層 HTML 的 </body> 也被取代）
+            if "</body>" in html_content:
+                html_content = html_content.replace("</body>", feedback_html + "\n</body>", 1)
+            else:
+                html_content += feedback_html
 
-        html_path.write_text(html_content, encoding="utf-8")
-        logger.info(f"feedback_html_updated case_id={case_id}")
+            html_path.write_text(html_content, encoding="utf-8")
+            logger.info(f"feedback_html_updated case_id={case_id}")
+            updated_any = True
 
     # ── 更新 Markdown ──
     if md_path.exists():
@@ -313,8 +319,9 @@ def update_case_with_feedback(
             md_content += feedback_md
             md_path.write_text(md_content, encoding="utf-8")
             logger.info(f"feedback_md_updated case_id={case_id}")
+            updated_any = True
 
-    return {"updated": True, "avg": avg, "time": now}
+    return {"updated": updated_any, "avg": avg, "time": now}
 
 
 # ── Endpoints ───────────────────────────────────────
